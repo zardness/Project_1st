@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>따릉이 수요확인</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="header"><h1>따릉이 수요확인</h1></header>
+
+  <main class="map-page">
+    <!-- 지도 + 요약 패널. 패널이 열리면(panel-open) 지도가 왼쪽으로 살짝 이동 -->
+    <div class="map-stage" id="mapStage">
+      <div class="map-wrap" id="mapWrap">
+        <!-- 레이어: (1) 기본 지도 → (2) 튀어나오는 자치구(hover 시) → (3) 클릭 영역. 2·3번은 js/main.js 가 자동 생성 -->
+        <img src="{{ url_for('static', filename='images/seoul_map.png') }}" alt="서울시 자치구 지도">
+        <svg class="pop-layer" id="popLayer"></svg>
+        <svg class="hit-layer" id="hitLayer"></svg>
+      </div>
+
+      <!-- 자치구 요약 패널: 자치구에 마우스를 올리면 오른쪽에서 나타남 (js/guPanel.js) -->
+      <div class="side-slot">
+        <aside class="gu-panel" id="guPanel"></aside>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">3조 김다예나 나경원 박상혁 배혜진 · 따릉이 프로젝트</footer>
+
+  <script src="{{ url_for('static', filename='js/districts.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/districtPaths.js') }}"></script>
+  <!-- 예측 (자치구 페이지와 같은 파일) -->
+  <script src="{{ url_for('static', filename='model/model.js') }}"></script>
+  <script src="{{ url_for('static', filename='data/station_share.js') }}"></script>
+  <script src="{{ url_for('static', filename='data/holidays.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/predict.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/guPanel.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
