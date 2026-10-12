@@ -1,2 +1,6 @@
-etc/
-00_data/
+.ipynb_checkpoints/
+__pycache__/
+.vscode/
+.venv/
+.vs/
+.vercel/
