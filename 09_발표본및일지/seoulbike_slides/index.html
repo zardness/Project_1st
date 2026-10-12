@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>서울시 따릉이 재배치 예측 시스템</title>
+  <!-- 글꼴: 본문 IBM Plex Sans KR, 코드 IBM Plex Mono (구글 폰트) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+  <style>
+    /* ===== 색과 글꼴을 변수로 모아 두기: 여기만 바꾸면 전체 분위기가 바뀜 ===== */
+    :root {
+      --paper: #F7FAF8;      /* 바탕 */
+      --dot: #CADCCF;        /* 바탕에 찍히는 점 색 (글씨를 방해하지 않게 연하게) */
+      --grid: #DCE7E0;       /* 표·목록의 얇은 선 */
+      --ink: #0B4A2D;        /* 제목·강조 (따릉이 진초록) */
+      --text: #2E3A33;       /* 본문 */
+      --muted: #66756C;      /* 보조 설명 */
+      --mark: #3DFFA8;       /* 형광펜 (표지에 한 곳만) */
+      --soft: #D9F5E5;       /* 강조 박스 배경 (민트 계열) */
+      --font: "IBM Plex Sans KR", "Malgun Gothic", sans-serif;
+      --mono: "IBM Plex Mono", Consolas, monospace;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; font-family: var(--font); color: var(--text); line-height: 1.7;
+      word-break: keep-all;   /* 한글이 단어 중간에서 줄바꿈되지 않게 */
+      /* 배경에 28px 간격으로 작은 점 찍기 */
+      background:
+        radial-gradient(circle, var(--dot) 1.5px, transparent 1.9px) 0 0 / 28px 28px,
+        var(--paper);
+    }
+    a { color: var(--ink); }
+    :focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+    /* ===== 상단 고정 메뉴 ===== */
+    nav {
+      position: sticky; top: 0; z-index: 10; background: rgba(247,250,248,.96);
+      border-bottom: 2px solid var(--ink); display: flex; gap: 20px; align-items: center;
+      padding: 10px 24px; overflow-x: auto; white-space: nowrap;
+    }
+    nav strong { color: var(--ink); margin-right: auto; }
+    nav a { text-decoration: none; font-size: 15px; }
+
+    /* ===== 공통 섹션 ===== */
+    section { max-width: 1040px; margin: 0 auto; padding: 72px 24px; }
+    h1, h2, h3 { color: var(--ink); line-height: 1.3; }
+    h2 { font-size: 30px; margin: 0 0 8px; }
+    .lead { color: var(--muted); max-width: 640px; margin: 0 0 32px; }
+
+    /* ===== 표지 ===== */
+    .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: center; min-height: 80vh; }
+    .hero h1 { font-size: clamp(34px, 5vw, 56px); margin: 0 0 16px; }
+    /* 형광펜은 표지 제목 아래 한 줄에만 */
+    .hero h1 span { background: linear-gradient(transparent 60%, var(--mark) 60%); }
+    .team { color: var(--muted); }
+    .btn {
+      display: inline-block; padding: 12px 20px; border: 2px solid var(--ink);
+      background: var(--ink); color: #fff; text-decoration: none; font-weight: 600; margin: 8px 8px 0 0;
+    }
+    .btn.line { background: transparent; color: var(--ink); }
+
+    /* ===== 영상·이미지 공통 (클릭하면 확대) ===== */
+    .media { width: 100%; border: 2px solid var(--ink); background: #fff; display: block; cursor: zoom-in; }
+
+    /* ===== 카드 3칸 (배경, 핵심 성과) ===== */
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card { border: 2px solid var(--ink); background: #fff; padding: 24px; }
+    .card small { font-family: var(--mono); color: var(--muted); }
+    .card .big { display: block; font-size: 44px; font-weight: 700; color: var(--ink); line-height: 1.2; margin: 8px 0; }
+    .card p { margin: 0; color: var(--muted); }
+
+    /* ===== 개발 과정: 6단계 상자 ===== */
+    .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .box { border: 2px solid var(--ink); background: #fff; padding: 20px; }
+    .box.on { background: var(--soft); }
+    .box b { display: block; color: var(--ink); font-size: 18px; }
+    .box span { color: var(--muted); font-size: 15px; }
+
+    /* ===== 표 ===== */
+    table { width: 100%; border-collapse: collapse; background: #fff; border: 2px solid var(--ink); }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--grid); }
+    th { background: var(--ink); color: #fff; }
+    tr.best td { background: var(--soft); font-weight: 600; color: var(--ink); }
+
+    /* ===== 단계 목록: 왼쪽 설명 / 오른쪽 영상 ===== */
+    .step { display: grid; grid-template-columns: 64px 1fr 1.2fr; gap: 24px; padding: 32px 0; border-top: 1px dashed var(--ink); }
+    .step .no { font-family: var(--mono); font-size: 28px; color: var(--ink); }
+    .step h3 { margin: 0 0 8px; }
+    .step ul { margin: 0; padding-left: 18px; color: var(--muted); }
+
+    /* ===== 자료 다운로드 목록 ===== */
+    .files { list-style: none; padding: 0; margin: 0; }
+    .files li { display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--grid); }
+    .files span { color: var(--muted); }
+
+    /* ===== 팀 소개 ===== */
+    .members { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .member { border: 2px solid var(--ink); background: #fff; padding: 20px; }
+    .member b { color: var(--ink); font-size: 18px; }
+    .member p { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+
+    /* ===== QR 영역 ===== */
+    .try { display: flex; gap: 32px; align-items: center; flex-wrap: wrap; }
+    .try img { width: 180px; border: 2px solid var(--ink); background: #fff; padding: 8px; }
+
+    /* ===== 확대 보기 창 (모달) ===== */
+    #modal {
+      position: fixed; inset: 0; background: rgba(10,24,16,.88); display: none;
+      align-items: center; justify-content: center; padding: 24px; z-index: 100;
+    }
+    #modal.open { display: flex; }
+    #modal img, #modal video { max-width: 100%; max-height: 90vh; }
+    #modal button { position: absolute; top: 16px; right: 16px; font-size: 16px; padding: 8px 14px; cursor: pointer; }
+
+    footer { text-align: center; padding: 40px; color: var(--muted); }
+
+    /* ===== 휴대폰 화면: 한 줄로 쌓기 ===== */
+    @media (max-width: 760px) {
+      .hero, .step, .cards, .flow, .members { grid-template-columns: 1fr; }
+      .hero { min-height: auto; }
+    }
+    /* 움직임 줄이기 설정한 사용자 배려 */
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+
+  <!-- 상단 메뉴: href="#아이디" 로 해당 섹션으로 이동 -->
+  <nav>
+    <strong>따릉이 재배치 예측</strong>
+    <a href="#why">배경</a>
+    <a href="#result">성과</a>
+    <a href="#process">개발 과정</a>
+    <a href="#model">모델 비교</a>
+    <a href="#web">웹 시연</a>
+    <a href="#files">자료</a>
+    <a href="#try">직접 해보기</a>
+  </nav>
+
+  <!-- ===== 1. 표지 ===== -->
+  <section class="hero" id="top">
+    <div>
+      <h1>수요를 미리 알면<br><span>재배치를 먼저 준비한다</span></h1>
+      <p>서울시 따릉이 수요를 예측하고, 점검 우선순위를 웹에서 확인합니다.</p>
+      <p class="team">3조 : 김다예나, 나경원, 박상혁, 배혜진 · 2026.09.13 ~ 10.12</p>
+      <a class="btn" href="#why">발표 보기</a>
+      <a class="btn line" href="https://seoulbike.vercel.app" target="_blank" rel="noopener">서비스 열기</a>
+    </div>
+    <!-- 표지 영상: 사이트 화면만 잘라 소리 없이 자동 반복 재생 (poster: 영상이 뜨기 전 보이는 사진) -->
+    <video class="media" poster="assets/hero-poster.jpg" autoplay muted loop playsinline>
+      <source src="assets/hero.mp4" type="video/mp4">
+      <source src="assets/hero.webm" type="video/webm">   <!-- mp4가 안 되는 브라우저용 예비 영상 -->
+    </video>
+  </section>
+
+  <!-- ===== 2. 문제 배경 ===== -->
+  <section id="why">
+    <h2>문제는 '부족'이 아니라 '불균형'</h2>
+    <p class="lead">수요는 지역·시간대·요일·날씨에 따라 크게 달라집니다. 부족한 곳과 넘치는 곳이 같은 시간에 공존합니다.</p>
+    <div class="cards">
+      <div class="card"><small>시간</small><span class="big">출근 시간</span><p>"자전거가 한 대도 없었어요."</p></div>
+      <div class="card"><small>장소</small><span class="big">대여소</span><p>"같은 시간인데 어떤 대여소는 항상 붐벼요."</p></div>
+      <div class="card"><small>해결 방향</small><span class="big">예측</span><p>"미리 수요를 알 수 있다면 재배치도 더 효율적이지 않을까?"</p></div>
+    </div>
+  </section>
+
+  <!-- ===== 3. 핵심 성과 (숫자 3개) ===== -->
+  <section id="result">
+    <h2>핵심 성과</h2>
+    <p class="lead">데이터 규모, 오프라인 시험 성능, 웹 제공 범위입니다.</p>
+    <div class="cards">
+      <div class="card"><small>DATA</small><span class="big">1.35억 건</span><p>2020~2025 대여 기록 · 25개 자치구</p></div>
+      <div class="card"><small>PERFORMANCE</small><span class="big">42.6%</span><p>2025년 시간 MAE 감소 (지난주 같은 시간 대비)</p></div>
+      <div class="card"><small>SERVICE</small><span class="big">7일</span><p>웹에서 확인하는 예측 기간</p></div>
+    </div>
+  </section>
+
+  <!-- ===== 4. 개발 과정 (6단계) ===== -->
+  <section id="process">
+    <h2>개발 과정</h2>
+    <p class="lead">수집부터 서비스까지의 흐름입니다.</p>
+    <div class="flow">
+      <div class="box"><b>1 데이터 수집</b><span>대여·반납 이력, 기상, 공휴일</span></div>
+      <div class="box"><b>2 데이터 전처리</b><span>날짜·열 이름 통일, 자치구 단위 집계</span></div>
+      <div class="box"><b>3 데이터 분석</b><span>시간대, 요일·계절, 지역 패턴</span></div>
+      <div class="box"><b>4 AI 기술 적용·학습</b><span>수요 예측 모델, 군집·분류·순유입</span></div>
+      <div class="box"><b>5 모델 개발·검증</b><span>학습 22~23 · 검증 24 · 시험 25</span></div>
+      <div class="box on"><b>6 서비스 연결</b><span>7일 예측 · 지도·자치구·대여소</span></div>
+    </div>
+  </section>
+
+  <!-- ===== 5. 데이터에서 발견한 것 (분석 → 모델 변수) ===== -->
+  <section id="insight">
+    <h2>분석에서 변수로</h2>
+    <p class="lead">발견한 패턴을 모델이 쓸 수 있는 변수로 바꿨습니다.</p>
+    <table>
+      <tr><th>발견한 패턴</th><th>모델 변수</th></tr>
+      <tr><td>봄·가을 정점, 1~2월은 연평균의 32~63%</td><td>월</td></tr>
+      <tr><td>주말은 평일의 0.75배, 공휴일은 0.59배 (2025)</td><td>요일, 주말, 공휴일, 쉬는 날</td></tr>
+      <tr><td>8시·18시에 수요 집중</td><td>시간, 출퇴근 시간, 같은 시간 평균</td></tr>
+      <tr><td>자치구마다 수요 차이</td><td>자치구 코드</td></tr>
+      <tr><td>비·기온 등 날씨에 따라 변동</td><td>강수량, 기온, 일교차, 미세먼지</td></tr>
+    </table>
+  </section>
+
+  <!-- ===== 6. 모델 비교 ===== -->
+  <section id="model">
+    <h2>모델 비교</h2>
+    <p class="lead">2024년 검증 결과입니다. 값이 낮을수록 좋습니다.</p>
+    <table>
+      <tr><th>모델</th><th>시간 MAE</th><th>하루 MAPE (%)</th></tr>
+      <tr class="best"><td>그래디언트 부스팅 (HGB) · 최종 선택</td><td>25.78</td><td>16.57</td></tr>
+      <tr><td>랜덤포레스트</td><td>26.04</td><td>17.51</td></tr>
+      <tr><td>선형회귀 (Ridge)</td><td>37.53</td><td>25.02</td></tr>
+      <tr><td>기준 모델 (지난주 같은 시간)</td><td>44.76</td><td>43.01</td></tr>
+    </table>
+    <p class="lead" style="margin-top:16px">날씨를 넣으면 시간 MAE가 31.71에서 25.78로 줄었습니다.</p>
+  </section>
+
+  <!-- ===== 7. 웹 시연 (단계가 실제 순서라서 번호 사용) ===== -->
+  <section id="web">
+    <h2>이렇게 사용합니다</h2>
+    <p class="lead">실제 사용 화면입니다. 이미지를 누르면 크게 볼 수 있습니다.</p>
+
+    <!-- 단계 하나 = div.step 하나. 단계를 늘리려면 이 블록을 복사해서 붙여 넣기 -->
+    <div class="step">
+      <div class="no">1</div>
+      <div>
+        <h3>서울시 지도</h3>
+        <ul>
+          <li>자치구에 마우스를 올리면 요약 패널 표시</li>
+          <li>오늘 예상 대여 건수, 시간대별 수요 확인</li>
+        </ul>
+      </div>
+      <img class="media" src="assets/web-01.png" alt="서울시 지도 화면">
+    </div>
+
+    <div class="step">
+      <div class="no">2</div>
+      <div>
+        <h3>자치구 페이지</h3>
+        <ul>
+          <li>날짜와 시간을 선택해 예측 확인</li>
+          <li>수요가 큰 대여소 순서로 목록 표시</li>
+        </ul>
+      </div>
+      <img class="media" src="assets/web-02.png" alt="자치구 페이지 화면">
+    </div>
+
+    <div class="step">
+      <div class="no">3</div>
+      <div>
+        <h3>대여소 상세</h3>
+        <ul>
+          <li>24시간·7일 그래프 확인</li>
+          <li>구 안에서의 순위 확인</li>
+        </ul>
+      </div>
+      <img class="media" src="assets/web-03.png" alt="대여소 상세 화면">
+    </div>
+  </section>
+
+  <!-- ===== 8. 한계와 다음 단계 ===== -->
+  <section id="next">
+    <h2>한계와 다음 검증</h2>
+    <p class="lead">현재 웹은 실시간 재고, 예보 날씨, 최근 대여 이력을 자동으로 가져오지 않습니다.</p>
+    <div class="cards">
+      <div class="card"><small>01</small><span class="big">모델 평가</span><p>배포 모델의 시간별 오차, 예보 날씨를 넣은 미래 예측</p></div>
+      <div class="card"><small>02</small><span class="big">조건 결합</span><p>실시간 재고와 거치대 용량, 차량 적재량·이동 시간</p></div>
+      <div class="card"><small>03</small><span class="big">현장 실험</span><p>부족 시간 감소 측정, 작업 이동거리·비용 비교</p></div>
+    </div>
+  </section>
+
+  <!-- ===== 9. 팀 소개 ===== -->
+  <section id="team">
+    <h2>팀 소개</h2>
+    <div class="members">
+      <div class="member"><b>김다예나</b><p>기상 전처리 · 모델 학습·검증 · 웹 구현</p></div>
+      <div class="member"><b>나경원</b><p>이력 통합 · 시간별 분석 · 예측 함수 정리</p></div>
+      <div class="member"><b>박상혁</b><p>월별 시각화 · 시간대 정보 · PPT·발표</p></div>
+      <div class="member"><b>배혜진</b><p>요일 분석 · 가용수량 전처리 · 발표 웹</p></div>
+    </div>
+  </section>
+
+  <!-- ===== 10. 자료 다운로드 ===== -->
+  <section id="files">
+    <h2>발표 자료</h2>
+    <p class="lead">결과 보고서와 작업일지를 내려받을 수 있습니다.</p>
+    <ul class="files">
+      <!-- download 속성: 클릭하면 열지 않고 바로 내려받기 -->
+      <li><a href="assets/slides.pdf" download>결과 보고서 (발표 슬라이드)</a><span>PDF</span></li>
+      <li><a href="assets/work-log.pdf" download>작업일지</a><span>PDF</span></li>
+      <!-- 파일이 더 생기면 li 한 줄을 복사해서 추가 -->
+    </ul>
+  </section>
+
+  <!-- ===== 11. 직접 해보기 (QR) ===== -->
+  <section id="try">
+    <h2>직접 사용해 보세요</h2>
+    <div class="try">
+      <img src="assets/qr.png" alt="발표 자료와 서비스 접속 QR 코드">
+      <div>
+        <p>휴대폰 카메라로 QR을 찍으면 열립니다.</p>
+        <a class="btn" href="https://seoulbike.vercel.app" target="_blank" rel="noopener">서비스 열기</a>
+        <p class="team">https://seoulbike.vercel.app</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>3조(김다예나, 나경원, 박상혁, 배혜진) · 서울시 따릉이 재배치 예측 시스템 · <a href="#top">맨 위로</a></footer>
+
+  <!-- ===== 확대 보기 창 ===== -->
+  <div id="modal" role="dialog" aria-label="크게 보기">
+    <button type="button" id="close">닫기 (Esc)</button>
+    <div id="modal-body"></div>
+  </div>
+
+  <script>
+    // 확대 창 관련 요소 가져오기
+    const modal = document.getElementById("modal");
+    const body = document.getElementById("modal-body");
+
+    // class="media" 인 영상·이미지를 클릭하면 확대 창에 복사해서 보여주기
+    document.querySelectorAll(".media").forEach(el => {
+      el.addEventListener("click", () => {
+        const copy = el.cloneNode(true);   // 원본은 그대로 두고 복사본 사용
+        copy.classList.remove("media");
+        if (copy.tagName === "VIDEO") copy.controls = true;   // 확대 시 재생 버튼 표시
+        body.innerHTML = "";
+        body.appendChild(copy);
+        modal.classList.add("open");
+      });
+    });
+
+    // 닫기: 버튼, 바깥 어두운 영역 클릭, Esc 키
+    function closeModal() {
+      modal.classList.remove("open");
+      body.innerHTML = "";   // 영상이 뒤에서 계속 재생되지 않게 비우기
+    }
+    document.getElementById("close").addEventListener("click", closeModal);
+    modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+  </script>
+</body>
+</html>
